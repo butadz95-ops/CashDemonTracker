@@ -38,7 +38,11 @@ import {
   Activity,
   Check,
   X,
-  Filter
+  Filter,
+  WifiOff,
+  CloudOff,
+  Cloud,
+  RefreshCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -114,6 +118,21 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Online/Offline Listener
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -188,7 +207,7 @@ export default function App() {
 
     const q = query(collection(db, path), ...constraints);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       const txs: Transaction[] = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -196,7 +215,8 @@ export default function App() {
           date: (data.date as Timestamp).toDate(),
           breakdown: data.breakdown,
           total: data.total,
-          uid: data.uid
+          uid: data.uid,
+          hasPendingWrites: doc.metadata.hasPendingWrites
         };
       });
       setTransactions(txs);
@@ -221,7 +241,7 @@ export default function App() {
       orderBy('timestamp', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       const logs: ActivityLog[] = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -229,7 +249,8 @@ export default function App() {
           action: data.action,
           timestamp: (data.timestamp as Timestamp).toDate(),
           details: data.details,
-          uid: data.uid
+          uid: data.uid,
+          hasPendingWrites: doc.metadata.hasPendingWrites
         };
       });
       setActivityLogs(logs);
@@ -586,12 +607,20 @@ export default function App() {
             <Wallet className="w-6 h-6 text-emerald-600" />
             <span className="font-bold text-xl text-neutral-900">Cash Tracker</span>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="p-2 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {!isOnline && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100">
+                <WifiOff className="w-3 h-3" />
+                Offline
+              </div>
+            )}
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-neutral-400 hover:text-neutral-600 rounded-lg hover:bg-neutral-100 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -742,7 +771,12 @@ export default function App() {
                             <Calendar className="w-6 h-6 text-emerald-600" />
                           </div>
                           <div className="text-left">
-                            <p className="font-bold text-neutral-900">₱ {tx.total.toLocaleString()}</p>
+                            <p className="font-bold text-neutral-900 flex items-center gap-2">
+                              ₱ {tx.total.toLocaleString()}
+                              {tx.hasPendingWrites && (
+                                <RefreshCcw className="w-3 h-3 text-emerald-500 animate-spin" />
+                              )}
+                            </p>
                             <p className="text-xs text-neutral-400">{tx.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                           </div>
                         </div>
@@ -827,8 +861,11 @@ export default function App() {
                            <Trash2 className="w-6 h-6" />}
                         </div>
                         <div className="text-left">
-                          <p className="font-bold text-neutral-900">
+                          <p className="font-bold text-neutral-900 flex items-center gap-2">
                             {log.action} <span className="text-neutral-400 font-normal">₱ {log.details.total.toLocaleString()}</span>
+                            {log.hasPendingWrites && (
+                              <RefreshCcw className="w-3 h-3 text-emerald-500 animate-spin" />
+                            )}
                           </p>
                           <p className="text-xs text-neutral-400">
                             {log.timestamp.toLocaleDateString()} at {log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

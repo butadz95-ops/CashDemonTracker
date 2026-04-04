@@ -8,6 +8,7 @@ export interface Transaction {
   breakdown: Breakdown;
   total: number;
   uid: string;
+  hasPendingWrites?: boolean;
 }
 
 export interface ActivityLog {
@@ -21,6 +22,7 @@ export interface ActivityLog {
     originalDate?: Date;
   };
   uid: string;
+  hasPendingWrites?: boolean;
 }
 
 export const DENOMINATIONS = [1000, 500, 200, 100, 50, 20, 10, 5, 1];
