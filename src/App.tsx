@@ -679,7 +679,7 @@ export default function App() {
               className="space-y-4"
             >
               <div className="bg-white rounded-3xl shadow-sm border border-neutral-200 overflow-hidden">
-                <div className="p-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50">
+                <div className="p-6 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/50 sticky top-[72px] z-10 backdrop-blur-md">
                   <div className="flex items-center gap-3">
                     <h3 className="font-bold text-neutral-900">{editingId ? 'Edit Transaction' : 'Denominations'}</h3>
                     {editingId && (
