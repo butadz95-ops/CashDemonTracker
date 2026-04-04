@@ -158,21 +158,24 @@ export default function App() {
   // Connection Test
   useEffect(() => {
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 10; // Increased retries
+    const retryDelay = 3000; // Increased delay
 
     async function testConnection() {
       try {
+        // Use getDoc instead of getDocFromServer to allow for initial provisioning lag
+        // but still check if we can reach the server eventually.
         await getDocFromServer(doc(db, 'test', 'connection'));
         setConnectionError(null);
       } catch (error) {
         if (error instanceof Error) {
-          if (error.message.includes('the client is offline')) {
+          if (error.message.includes('the client is offline') || error.message.includes('Failed to get document from server')) {
             if (retryCount < maxRetries) {
               retryCount++;
-              setTimeout(testConnection, 2000);
+              setTimeout(testConnection, retryDelay);
             } else {
-              setConnectionError("Firestore is offline. Please check your internet connection or Firebase configuration.");
-              console.error("Firestore Connection Error: Client is offline after retries.");
+              setConnectionError("Firestore is still initializing or offline. Please refresh in a moment.");
+              console.error("Firestore Connection Error: Client is offline after multiple retries.");
             }
           } else {
             console.error("Firestore Connection Test Error:", error.message);
@@ -554,9 +557,17 @@ export default function App() {
           <p className="text-neutral-500 mb-8">Track your physical savings with ease. Count your bills and coins in one place.</p>
           
           {connectionError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm flex items-center gap-3">
-              <X className="w-5 h-5 flex-shrink-0" />
-              <p className="text-left">{connectionError}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <X className="w-5 h-5 flex-shrink-0" />
+                <p className="text-left font-medium">{connectionError}</p>
+              </div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-xs bg-red-100 hover:bg-red-200 py-2 px-3 rounded-xl transition-colors font-bold"
+              >
+                Retry Connection
+              </button>
             </div>
           )}
 
