@@ -112,6 +112,7 @@ export default function App() {
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Auth Listener
@@ -344,14 +345,24 @@ export default function App() {
   const handleLogin = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
+    setLoginError(null);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('auth/cancelled-popup-request')) {
-        console.warn("Login popup request was cancelled or another one is pending.");
+      if (error instanceof Error) {
+        if (error.message.includes('auth/cancelled-popup-request')) {
+          console.warn("Login popup request was cancelled or another one is pending.");
+        } else if (error.message.includes('auth/unauthorized-domain')) {
+          setLoginError("This domain is not authorized for Google Sign-In. Please add the current URL to your Firebase Console's Authorized Domains.");
+        } else if (error.message.includes('auth/popup-blocked')) {
+          setLoginError("The login popup was blocked by your browser. Please allow popups for this site or open the app in a new tab.");
+        } else {
+          setLoginError(`Login Error: ${error.message}`);
+          console.error("Login Error:", error);
+        }
       } else {
-        console.error("Login Error:", error);
+        setLoginError("An unknown error occurred during login.");
       }
     } finally {
       setIsLoggingIn(false);
@@ -525,6 +536,21 @@ export default function App() {
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm flex items-center gap-3">
               <X className="w-5 h-5 flex-shrink-0" />
               <p className="text-left">{connectionError}</p>
+            </div>
+          )}
+
+          {loginError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <X className="w-5 h-5 flex-shrink-0" />
+                <p className="text-left font-medium">{loginError}</p>
+              </div>
+              <button 
+                onClick={() => window.open(window.location.href, '_blank')}
+                className="text-xs bg-red-100 hover:bg-red-200 py-2 px-3 rounded-xl transition-colors font-bold"
+              >
+                Try Opening in New Tab
+              </button>
             </div>
           )}
 
